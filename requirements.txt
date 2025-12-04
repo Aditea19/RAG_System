@@ -1,13 +1,14 @@
-langchain>=0.3.0
-langchain-community
-langchain-google-genai
-chromadb
-google-generativeai
-streamlit
-python-dotenv
-langchain-huggingface
-langchain-chroma
-pypdf
-sentence-transformers
-pydantic
+# LangChain core + ecosystem (Pydantic v2 compatible)
+langchain==0.3.7
+langchain-core==0.3.15
+langchain-community==0.3.7
+langchain-google-genai==2.0.5
+langchain-huggingface==0.1.2
+langchain-chroma==0.1.4
+chromadb==0.5.17
+sentence-transformers==3.1.1
+google-generativeai==0.8.3
+streamlit==1.39.0
+python-dotenv==1.0.1
+pypdf==5.1.0
 
