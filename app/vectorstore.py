@@ -18,7 +18,7 @@ def build_vectorstore(docs, persist: bool = True):
     store = Chroma.from_documents(
         documents=docs,
         embedding=embed,
-        persist_directory=CHROMA_PERSIST_DIR if persist else None,
+        persist_directory=None,  # Always in-memory on cloud
         collection_name=get_chroma_collection_name(),
     )
     return store
@@ -28,7 +28,7 @@ def load_vectorstore():
     try:
         embed = _embeddings()
         store = Chroma(
-            persist_directory=CHROMA_PERSIST_DIR,
+            persist_directory=None,
             collection_name=get_chroma_collection_name(),
             embedding_function=embed,
         )
