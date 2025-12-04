@@ -1,35 +1,46 @@
 import os
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
-import shutil, time
-from app.config import get_chroma_collection_name, CHROMA_PERSIST_DIR
 
+# ---------- FIXED FOR STREAMLIT CLOUD ----------
+# Use one stable in-memory collection name
+COLLECTION_NAME = "rag_system_collection"
 
 def _embeddings():
-    # Configure with API key explicitly – no ADC required
     return GoogleGenerativeAIEmbeddings(
         model="models/text-embedding-004",
         google_api_key=os.environ.get("GEMINI_API_KEY"),
     )
 
 
-def build_vectorstore(docs, persist: bool = True):
+# ---------- BUILD VECTORSTORE ----------
+def build_vectorstore(docs, persist: bool = False):
+    """
+    Cloud-safe Chroma store (in-memory only).
+    """
     embed = _embeddings()
+
     store = Chroma.from_documents(
         documents=docs,
         embedding=embed,
-        persist_directory=None,  # Always in-memory on cloud
-        collection_name=get_chroma_collection_name(),
+        persist_directory=None,       # MUST be None on Streamlit Cloud
+        collection_name=COLLECTION_NAME,
     )
     return store
 
 
+# ---------- LOAD VECTORSTORE ----------
 def load_vectorstore():
+    """
+    Returns an empty in-memory vectorstore if nothing exists.
+    Cloud resets between runs, so persistence is not supported.
+    """
+    embed = _embeddings()
+
     try:
-        embed = _embeddings()
         store = Chroma(
             persist_directory=None,
-            collection_name=get_chroma_collection_name(),
+            collection_name=COLLECTION_NAME,
             embedding_function=embed,
         )
         return store
@@ -37,11 +48,10 @@ def load_vectorstore():
         return None
 
 
+# ---------- CLEAR VECTORSTORE ----------
 def clear_chroma():
-    try:
-        shutil.rmtree(CHROMA_PERSIST_DIR, ignore_errors=True)
-        time.sleep(0.4)
-        return True
-    except:
-        return False
-
+    """
+    Nothing to delete since persistence is disabled.
+    This function simply returns True to keep UI stable.
+    """
+    return True
