@@ -1,19 +1,18 @@
-import os
 import shutil
 import time
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.vectorstores import InMemoryVectorStore
-from app.config import CHROMA_PERSIST_DIR
 
 
+# Embeddings: use Google, not HuggingFace (HuggingFace requires PyTorch)
 def _embeddings():
-    return HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    return GoogleGenerativeAIEmbeddings(
+        model="models/text-embedding-004"
+    )
 
 
-# ----------------------------
-# BUILD VECTORSTORE (In-Memory)
-# ----------------------------
-def build_vectorstore(docs, persist: bool = True):
+# Build vectorstore (fully in-memory)
+def build_vectorstore(docs, persist: bool = False):
     embed = _embeddings()
 
     store = InMemoryVectorStore.from_documents(
@@ -21,37 +20,19 @@ def build_vectorstore(docs, persist: bool = True):
         embedding=embed
     )
 
-    # Optional: Save text + embeddings locally (only works locally, ignored on cloud)
-    if persist:
-        shutil.rmtree(CHROMA_PERSIST_DIR, ignore_errors=True)
-        os.makedirs(CHROMA_PERSIST_DIR, exist_ok=True)
-        store.save_local(CHROMA_PERSIST_DIR)
-
     return store
 
 
-# ----------------------------
-# LOAD VECTORSTORE
-# ----------------------------
+# Load vectorstore — in-memory vectorstore cannot be loaded
 def load_vectorstore():
-    embed = _embeddings()
-
-    try:
-        return InMemoryVectorStore.load_local(
-            CHROMA_PERSIST_DIR,
-            embeddings=embed
-        )
-    except:
-        return None
+    return None   # Always start fresh
 
 
-# ----------------------------
-# CLEAR VECTORSTORE
-# ----------------------------
+# Clear chroma directory (not used anymore)
 def clear_chroma():
     try:
-        shutil.rmtree(CHROMA_PERSIST_DIR, ignore_errors=True)
-        time.sleep(0.3)
+        shutil.rmtree("vectorstore", ignore_errors=True)
+        time.sleep(0.2)
         return True
     except:
         return False
