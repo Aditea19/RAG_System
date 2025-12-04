@@ -230,4 +230,4 @@ else:
 
 
 st.sidebar.markdown("---")
-st.sidebar.caption("Developed by ✨ Aditi Arya ✨")
+st.sidebar.markdown("Developed by ✨ Aditi Arya ✨")
