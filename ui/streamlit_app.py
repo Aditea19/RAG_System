@@ -119,7 +119,7 @@ if uploaded:
     # Create RAG components
     retriever = store.as_retriever(
         search_type="similarity",  
-        search_kwargs={"k": 3}     
+        search_kwargs={"k": 2}     
     )
 
     conv_chain = make_conversational_chain(retriever, model_name=GEMINI_MODEL_NAME)
