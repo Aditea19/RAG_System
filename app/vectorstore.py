@@ -2,8 +2,8 @@ import os
 import shutil
 import time
 from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
-from app.config import get_chroma_collection_name, CHROMA_PERSIST_DIR
+from langchain_core.vectorstores import InMemoryVectorStore
+from app.config import CHROMA_PERSIST_DIR
 
 
 def _embeddings():
@@ -11,15 +11,20 @@ def _embeddings():
 
 
 # ----------------------------
-# BUILD VECTORSTORE (FAISS)
+# BUILD VECTORSTORE (In-Memory)
 # ----------------------------
 def build_vectorstore(docs, persist: bool = True):
     embed = _embeddings()
 
-    store = FAISS.from_documents(docs, embed)
+    store = InMemoryVectorStore.from_documents(
+        docs,
+        embedding=embed
+    )
 
-    # Local persistence (Streamlit Cloud ignores this safely)
+    # Optional: Save text + embeddings locally (only works locally, ignored on cloud)
     if persist:
+        shutil.rmtree(CHROMA_PERSIST_DIR, ignore_errors=True)
+        os.makedirs(CHROMA_PERSIST_DIR, exist_ok=True)
         store.save_local(CHROMA_PERSIST_DIR)
 
     return store
@@ -32,10 +37,9 @@ def load_vectorstore():
     embed = _embeddings()
 
     try:
-        return FAISS.load_local(
+        return InMemoryVectorStore.load_local(
             CHROMA_PERSIST_DIR,
-            embed,
-            allow_dangerous_deserialization=True  # required for FAISS
+            embeddings=embed
         )
     except:
         return None
@@ -44,7 +48,7 @@ def load_vectorstore():
 # ----------------------------
 # CLEAR VECTORSTORE
 # ----------------------------
-def clear_chroma():  # keep same function name for compatibility
+def clear_chroma():
     try:
         shutil.rmtree(CHROMA_PERSIST_DIR, ignore_errors=True)
         time.sleep(0.3)
