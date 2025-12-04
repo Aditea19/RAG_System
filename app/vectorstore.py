@@ -1,57 +1,61 @@
 import os
-from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
-
-# ---------- FIXED FOR STREAMLIT CLOUD ----------
-# Use one stable in-memory collection name
-COLLECTION_NAME = "rag_system_collection"
-
-def _embeddings():
-    return GoogleGenerativeAIEmbeddings(
-        model="models/text-embedding-004",
-        google_api_key=os.environ.get("GEMINI_API_KEY"),
-    )
+import chromadb
+import shutil, time
+from app.config import get_chroma_collection_name, CHROMA_PERSIST_DIR
 
 
-# ---------- BUILD VECTORSTORE ----------
-def build_vectorstore(docs, persist: bool = False):
-    """
-    Cloud-safe Chroma store (in-memory only).
-    """
-    embed = _embeddings()
-
+def build_vectorstore(docs, persist: bool = True):
+    embed = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+    
+    # Force EphemeralClient on Streamlit Cloud (fixes tenant errors)
+    if os.environ.get("STREAMLIT_CLOUD_APP") or "streamlit.io" in os.environ.get("HOME", ""):
+        client = chromadb.EphemeralClient()
+        persist_dir = None
+    else:
+        # Local: your original behavior
+        persist_dir = CHROMA_PERSIST_DIR if persist else None
+        client = None  # let Chroma handle it
+    
     store = Chroma.from_documents(
-        documents=docs,
-        embedding=embed,
-        persist_directory=None,       # MUST be None on Streamlit Cloud
-        collection_name=COLLECTION_NAME,
+        documents=docs, 
+        embedding=embed, 
+        persist_directory=persist_dir,
+        client=client,  # Pass explicit client
+        collection_name=get_chroma_collection_name()
     )
     return store
 
 
-# ---------- LOAD VECTORSTORE ----------
 def load_vectorstore():
-    """
-    Returns an empty in-memory vectorstore if nothing exists.
-    Cloud resets between runs, so persistence is not supported.
-    """
-    embed = _embeddings()
-
     try:
+        embed = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
+        
+        # Same logic for load
+        if os.environ.get("STREAMLIT_CLOUD_APP") or "streamlit.io" in os.environ.get("HOME", ""):
+            client = chromadb.EphemeralClient()
+            persist_dir = None
+        else:
+            client = None
+            persist_dir = CHROMA_PERSIST_DIR
+        
         store = Chroma(
-            persist_directory=None,
-            collection_name=COLLECTION_NAME,
+            persist_directory=persist_dir, 
+            collection_name=get_chroma_collection_name(), 
             embedding_function=embed,
+            client=client  # Pass explicit client
         )
         return store
     except:
         return None
 
 
-# ---------- CLEAR VECTORSTORE ----------
+# Chroma clearing (local only)
 def clear_chroma():
-    """
-    Nothing to delete since persistence is disabled.
-    This function simply returns True to keep UI stable.
-    """
-    return True
+    try:
+        shutil.rmtree(CHROMA_PERSIST_DIR, ignore_errors=True)
+        time.sleep(0.4)
+        return True
+    except:
+        return False
