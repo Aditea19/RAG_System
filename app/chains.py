@@ -1,36 +1,32 @@
 import os
-from langchain_classic.chains import create_retrieval_chain, create_history_aware_retriever
-from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import ChatPromptTemplate
+from typing import List, Dict, Any
+
+from langchain_core.documents import Document
+from langchain_core.prompts import ChatPromptTemplate, PromptTemplate
+from langchain_core.runnables import RunnableLambda, RunnableParallel
+from langchain_core.output_parsers import StrOutputParser
 from langchain_google_genai import ChatGoogleGenerativeAI
+
+
+# -----------------------------
+# Conversational / QA RAG chain
+# -----------------------------
 
 
 def make_conversational_chain(retriever, model_name: str = "gemini-2.5-flash"):
     llm = ChatGoogleGenerativeAI(
         model=model_name,
         temperature=0.0,
-        google_api_key=os.environ.get("GEMINI_API_KEY")
+        google_api_key=os.environ.get("GEMINI_API_KEY"),
     )
 
-    # HISTORY AWARE RETRIEVER
-    history_aware_retriever = create_history_aware_retriever(
-        llm,
-        retriever,
-        prompt=ChatPromptTemplate.from_template("""
-You are a retrieval-optimized assistant.
-Rewrite the user's question ONLY if needed for better search.
-Chat history: {chat_history}
-Original question: {input}
-""")
-    )
-
-    # ANSWER FORMATTING 
-    qa_prompt = ChatPromptTemplate.from_template("""
+    qa_prompt = ChatPromptTemplate.from_template(
+        """
 You are an AI assistant answering strictly from the provided context.  
 Follow these rules:
 
-1. *Use ONLY the information from the context.*  
-2. If the answer is not present, reply exactly: *"Not available in the document."*
+1. Use ONLY the information from the context.  
+2. If the answer is not present, reply exactly: "Not available in the document."
 3. Be concise, clear, factual.
 4. No assumptions. No extra knowledge.
 5. Provide a small, clean paragraph — not too long, not too short.
@@ -47,20 +43,51 @@ CONTEXT:
 Question: {input}
 
 Give the best possible answer using ONLY what is above.
-""")
+"""
+    )
 
-    qa_chain = create_stuff_documents_chain(llm, qa_prompt)
+    def _format_docs(docs: List[Document]) -> str:
+        return "\n\n".join(d.page_content for d in docs)
 
-    return create_retrieval_chain(history_aware_retriever, qa_chain)
+    # Build a custom chain:
+    # 1) Take {"input": question}
+    # 2) Run retriever → docs
+    # 3) Format docs into context string
+    # 4) Call LLM with prompt
+    # 5) Return {"answer": ..., "context": docs}
+    rag_chain = (
+        RunnableParallel(
+            input=lambda x: x["input"],
+            docs=RunnableLambda(lambda x: retriever.invoke(x["input"])),
+        )
+    |   RunnableLambda(
+            lambda x: {
+                "input": x["input"],
+                "context": _format_docs(x["docs"]),
+                "_docs": x["docs"],
+            }
+        )
+    |   RunnableLambda(
+            lambda x: {
+                "answer": (
+                    qa_prompt | llm | StrOutputParser()
+                ).invoke({"input": x["input"], "context": x["context"]}),
+                "context": x["_docs"],
+            }
+        )
+    )
 
 
-# Summarizer
+    return rag_chain
+
+
+# -----------------
+# Summarizer chain
+# -----------------
+
 
 def make_summarizer_chain(model_name: str = "gemini-2.5-flash"):
     llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.0)
-
-    from langchain_classic.chains import LLMChain
-    from langchain_core.prompts import PromptTemplate
 
     template = """
 Summarize the document into {bullet_count} short, clear bullet points.
@@ -79,20 +106,26 @@ Document:
 
     prompt = PromptTemplate(
         input_variables=["doc", "bullet_count"],
-        template=template
+        template=template,
     )
 
-    return LLMChain(llm=llm, prompt=prompt)
+    chain = prompt | llm | StrOutputParser()
+
+    class SummarizerWrapper:
+        def run(self, inputs: Dict[str, Any]):
+            # inputs: {"doc": ..., "bullet_count": ...}
+            return chain.invoke(inputs)
+
+    return SummarizerWrapper()
 
 
-
+# -----------------
 # Compare chain
+# -----------------
+
 
 def make_compare_chain(model_name: str = "gemini-2.5-flash"):
     llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.0)
-
-    from langchain_classic.chains import LLMChain
-    from langchain_core.prompts import PromptTemplate
 
     template = """
 You are comparing *multiple documents* strictly based on the content provided.
@@ -138,7 +171,14 @@ Remember:
 
     prompt = PromptTemplate(
         input_variables=["all_docs", "filenames"],
-        template=template
+        template=template,
     )
 
-    return LLMChain(llm=llm, prompt=prompt)
+    chain = prompt | llm | StrOutputParser()
+
+    class CompareWrapper:
+        def run(self, inputs: dict):
+            # inputs: {"all_docs": ..., "filenames": ...}
+            return chain.invoke(inputs)
+
+    return CompareWrapper()
