@@ -87,7 +87,11 @@ Give the best possible answer using ONLY what is above.
 
 
 def make_summarizer_chain(model_name: str = "gemini-2.5-flash"):
-    llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.0)
+    llm = ChatGoogleGenerativeAI(
+        model=model_name,
+        temperature=0.0,
+        google_api_key=os.environ.get("GEMINI_API_KEY"),  # <-- important
+    )
 
     template = """
 Summarize the document into {bullet_count} short, clear bullet points.
@@ -124,8 +128,15 @@ Document:
 # -----------------
 
 
+
+
 def make_compare_chain(model_name: str = "gemini-2.5-flash"):
-    llm = ChatGoogleGenerativeAI(model=model_name, temperature=0.0)
+    llm = ChatGoogleGenerativeAI(
+        model=model_name,
+        temperature=0.0,
+        google_api_key=os.environ.get("GEMINI_API_KEY"),  # same pattern
+    )
+
 
     template = """
 You are comparing *multiple documents* strictly based on the content provided.
