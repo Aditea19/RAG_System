@@ -1,53 +1,47 @@
 import os
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 import shutil, time
 from app.config import get_chroma_collection_name, CHROMA_PERSIST_DIR
 
 
+def _embeddings():
+    # Configure with API key explicitly – no ADC required
+    return GoogleGenerativeAIEmbeddings(
+        model="models/text-embedding-004",
+        google_api_key=os.environ.get("GEMINI_API_KEY"),
+    )
+
+
 def build_vectorstore(docs, persist: bool = True):
-    embed = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-    
-    # On Streamlit Cloud: ALWAYS use in-memory (no persistence)
-    if os.environ.get("STREAMLIT_CLOUD_APP") or "streamlit.io" in os.environ.get("HOME", ""):
-        persist_dir = None
-    else:
-        persist_dir = CHROMA_PERSIST_DIR if persist else None
-    
+    embed = _embeddings()
     store = Chroma.from_documents(
-        documents=docs, 
-        embedding=embed, 
-        persist_directory=persist_dir, 
-        collection_name=get_chroma_collection_name()
+        documents=docs,
+        embedding=embed,
+        persist_directory=None,  # Always in-memory on cloud
+        collection_name=get_chroma_collection_name(),
     )
     return store
 
 
 def load_vectorstore():
     try:
-        embed = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-        
-        # On Streamlit Cloud: ALWAYS use in-memory (no persistence)
-        if os.environ.get("STREAMLIT_CLOUD_APP") or "streamlit.io" in os.environ.get("HOME", ""):
-            persist_dir = None
-        else:
-            persist_dir = CHROMA_PERSIST_DIR
-        
+        embed = _embeddings()
         store = Chroma(
-            persist_directory=persist_dir, 
-            collection_name=get_chroma_collection_name(), 
-            embedding_function=embed
+            persist_directory=None,
+            collection_name=get_chroma_collection_name(),
+            embedding_function=embed,
         )
         return store
     except:
         return None
 
 
-# Chroma clearing
 def clear_chroma():
     try:
         shutil.rmtree(CHROMA_PERSIST_DIR, ignore_errors=True)
-        time.sleep(0.4)  # allow windows to release locks
+        time.sleep(0.4)
         return True
     except:
         return False
+
