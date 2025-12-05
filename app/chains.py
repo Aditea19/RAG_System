@@ -144,6 +144,15 @@ You are comparing *multiple documents* strictly based on the content provided.
 The documents you must compare:
 {filenames}
 
+Important formatting rule:
+- whenever you mention a document, format the filename as a fake hyperlink like this:
+    [DocumentName.pdf](#)
+
+Example:
+Instead of "Document: AI_in_Healthcare.pdf"
+Write:
+[AI_in_Healthcare.pdf](#)    
+
 Your rules:
 - Use ONLY the information found in the provided text.
 - Do NOT invent or assume anything.
