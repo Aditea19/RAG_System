@@ -169,8 +169,6 @@ Now produce a structured comparison with these sections:
 
 1. *Overview of Each Document*
    - Section titles MUST NOT be hyperlinks.
-   - Format section titles like:
-     # AI_in_Healthcare.pdf  
    - Summarize each document separately by filename.
    - Mention the unique focus or purpose of each.
 
