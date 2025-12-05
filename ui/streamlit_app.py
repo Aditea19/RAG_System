@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import sys
 
 # Ensure project root importable
-sys.path.append(str(Path(_file_).resolve().parents[1]))
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.loaders import load_pdf
 from app.text_splitter import split_documents
