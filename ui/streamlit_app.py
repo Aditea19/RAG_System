@@ -178,4 +178,12 @@ else:
 
 # Signature
 st.markdown("---")
-st.markdown("Developed by ✨ *Aditi Arya* ✨")
+st.markdown(
+    """
+    <div style='text-align: center; margin-top:
+30px;'>
+        Developed by ✨ <b>*Aditi Arya*</b> ✨
+    </div>
+    """,
+    unsafe_allow_html=True
+)    
