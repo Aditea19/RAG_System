@@ -182,7 +182,7 @@ st.markdown(
     """
     <div style='text-align: center; margin-top:
 30px;'>
-        Developed by ✨ <b>*Aditi Arya*</b> ✨
+        Developed by ✨ *Aditi Arya* ✨
     </div>
     """,
     unsafe_allow_html=True
