@@ -1,5 +1,4 @@
 import os
-import shutil
 from pathlib import Path
 import uuid
 import streamlit as st
@@ -11,16 +10,15 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from app.loaders import load_pdf
 from app.text_splitter import split_documents
-from app.vectorstore import build_vectorstore, load_vectorstore
+from app.vectorstore import build_vectorstore
 from app.chains import (
     make_conversational_chain,
     make_summarizer_chain,
     make_compare_chain
 )
 from app.config import (
-    UPLOAD_DIR, VECTOR_DIR, GEMINI_MODEL_NAME,
-    CHROMA_PERSIST_DIR, reset_chroma_collection_name,
-    get_chroma_collection_name
+    UPLOAD_DIR,
+    GEMINI_MODEL_NAME
 )
 
 load_dotenv()

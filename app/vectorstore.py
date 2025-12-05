@@ -1,5 +1,3 @@
-import shutil
-import time
 import os
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_core.vectorstores import InMemoryVectorStore
@@ -34,11 +32,3 @@ def build_vectorstore(docs, persist: bool = False):
 def load_vectorstore():
     return None  # In-memory vectorstore cannot be reloaded
 
-
-def clear_chroma():
-    try:
-        shutil.rmtree("vectorstore", ignore_errors=True)
-        time.sleep(0.2)
-        return True
-    except:
-        return False
