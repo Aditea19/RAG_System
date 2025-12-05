@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 import sys
 
 # Ensure project root importable
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.append(str(Path(_file_).resolve().parents[1]))
 
 from app.loaders import load_pdf
 from app.text_splitter import split_documents
@@ -17,7 +17,6 @@ from app.chains import (
     make_summarizer_chain,
     make_compare_chain
 )
-from app.utils import doc_sources
 from app.config import (
     UPLOAD_DIR, VECTOR_DIR, GEMINI_MODEL_NAME,
     CHROMA_PERSIST_DIR, reset_chroma_collection_name,
@@ -32,50 +31,9 @@ st.set_page_config(page_title="RAG System", layout="wide")
 st.title("🚀 AI-Powered Document Search ")
 
 
-# SIDEBAR
-
-st.sidebar.markdown("### 🔧 Database Controls")
-st.sidebar.write("Collection:", get_chroma_collection_name())
-st.sidebar.code(CHROMA_PERSIST_DIR)
-
-# CLEAR DATABASE
-if st.sidebar.button(" Clear Database", type="primary"):
-    import chromadb
-
-    try:
-        chromadb.api.Client.cache.clear()
-    except:
-        pass
-
-    shutil.rmtree(CHROMA_PERSIST_DIR, ignore_errors=True)
-    Path(CHROMA_PERSIST_DIR).mkdir(parents=True, exist_ok=True)
-
-    reset_chroma_collection_name() 
-
-    # Reset Streamlit state
-    try:
-        st.cache_data.clear()
-        st.cache_resource.clear()
-    except:
-        pass
-    st.session_state.clear()
-
-    st.sidebar.success("✅ Database fully reset!")
-    st.rerun()
-
-# DATABASE STATS
-if st.sidebar.button("📊 DB Stats"):
-    try:
-        store = load_vectorstore()
-        if store and hasattr(store, "_collection"):
-            st.sidebar.success(f"Chunks: {store._collection.count()}")
-        else:
-            st.sidebar.info("Empty DB")
-    except:
-        st.sidebar.info("No DB found")
-
-st.sidebar.markdown("---")
-
+# 🔥 ----------------------
+# REMOVED SIDEBAR COMPLETELY
+# 🔥 ----------------------
 
 
 # FILE UPLOAD
@@ -107,14 +65,14 @@ if uploaded:
     
     st.markdown("### Splitting into chunks...")
     chunks = split_documents(docs_all)
-    st.success(f" Created *{len(chunks)}* chunks")
+    st.success(f" Created {len(chunks)} chunks")
 
     
     # BUILD VECTORSTORE
     
     st.markdown("### Building Vector Database...")
-    store = build_vectorstore(chunks, persist=True)
-    st.success("Vectorstore built & saved!")
+    store = build_vectorstore(chunks, persist=False)
+    st.success("Vectorstore built!")
 
     # Create RAG components
     retriever = store.as_retriever(
@@ -147,7 +105,6 @@ if uploaded:
                 if doc.metadata["source_file"] not in unique_files and doc.page_content.strip() in result["answer"]:
                     unique_files.append(doc.metadata["source_file"])
 
-            # If nothing directly matches, fallback to all retrieved (rare case)
             if not unique_files:
                 unique_files = list({d.metadata["source_file"] for d in result["context"]})
 
@@ -166,10 +123,7 @@ if uploaded:
     with col1:
         if st.button("📝 Summarize"):
 
-            # Combine all chunks text
             full_text = "\n\n".join([c.page_content for c in chunks])
-
-            # WORD COUNT LOGIC 
             total_words = len(full_text.split())
 
             if total_words < 500:
@@ -183,7 +137,6 @@ if uploaded:
             else:
                 bullet_count = 15
 
-            # Send bullet count to summarizer
             summary = summarizer_chain.run({
                 "doc": full_text,
                 "bullet_count": bullet_count
@@ -196,17 +149,14 @@ if uploaded:
     with col2:
         if st.button("📋 Compare Documents") and len(docs_all) >= 2:
 
-            # Group chunks by original filename
             grouped = {}
             for d in docs_all:
                 fname = d.metadata.get("source_file", "Unknown")
                 grouped.setdefault(fname, []).append(d)
 
-            # Require at least 2 different files
             if len(grouped) < 2:
                 st.error("Need at least two different documents to compare.")
             else:
-                # Prepare inputs for comparison
                 file_summaries = []
 
                 for fname, docs in grouped.items():
@@ -215,7 +165,6 @@ if uploaded:
 
                 combined_text = "\n\n".join(file_summaries)
 
-                # Build comparison prompt for LLM
                 comp = compare_chain.run({
                     "all_docs": combined_text,
                     "filenames": ", ".join(grouped.keys())
@@ -227,7 +176,6 @@ if uploaded:
 else:
     st.info(" Upload PDFs above.")
 
-
-
-st.sidebar.markdown("---")
-st.sidebar.markdown("Developed by ✨ Aditi Arya ✨")
+# Signature
+st.markdown("---")
+st.markdown("Developed by ✨ *Aditi Arya* ✨")
